@@ -1,0 +1,19 @@
+{
+  "name": "mockjs-demo",
+  "version": "1.0.0",
+  "description": "Mock.js 学习演示项目，包含 13 个常用场景 Demo",
+  "main": "test.html",
+  "scripts": {
+    "serve": "npx --yes serve@latest .",
+    "open": "start test.html"
+  },
+  "keywords": [
+    "mockjs",
+    "mock",
+    "axios",
+    "frontend",
+    "demo"
+  ],
+  "author": "北澇 <851624154@qq.com>",
+  "license": "MIT"
+}

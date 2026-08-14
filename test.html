@@ -1,0 +1,394 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>1-Mock.mock基础</title>
+  </head>
+  <body>
+    <h3>1. Mock.mock() 基础</h3>
+    <button onclick="run1()">发送 GET 请求</button>
+    <pre id="result1" style="background: #eee; padding: 10px"></pre>
+
+    <script src="https://cdn.jsdelivr.net/npm/mockjs@1.1.0/dist/mock-min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+      // 定义拦截规则
+      Mock.mock("/api/user", "get", {
+        "id|+1": 1,
+        name: "@cname",
+        "age|18-60": 1,
+        email: "@email",
+      });
+
+      async function run1() {
+        const res = await axios.get("/api/user");
+        document.getElementById("result1").textContent = JSON.stringify(
+          res.data,
+          null,
+          2,
+        );
+      }
+    </script>
+
+    <h3>2. 数据模板 7 种规则</h3>
+    <button onclick="run2()">生成数据</button>
+    <pre id="result2" style="background: #eee; padding: 10px"></pre>
+
+    <script>
+      function run2() {
+        const data = Mock.mock({
+          // 1. 固定数量
+          "fixed|3": ["a"],
+          // 2. 范围数量
+          "range|2-5": ["b"],
+          // 3. 布尔值概率
+          "bool|1-3": true,
+          // 4. 数字范围整数
+          "int|10-20": 1,
+          // 5. 数字范围小数
+          "float|10-20.2-4": 1,
+          // 6. 自增步长
+          "id|+2": 0,
+          // 7. 对象属性个数
+          "obj|2-3": { x: 1, y: 2, z: 3, w: 4 },
+        });
+        document.getElementById("result2").textContent = JSON.stringify(
+          data,
+          null,
+          2,
+        );
+      }
+    </script>
+
+    <h3>3. Mock.Random 工具类</h3>
+    <button onclick="run3()">生成随机值</button>
+    <pre id="result3" style="background: #eee; padding: 10px"></pre>
+
+    <script>
+      const R = Mock.Random;
+      function run3() {
+        const obj = {
+          name: R.cname(),
+          email: R.email(),
+          date: R.date("yyyy-MM-dd"),
+          city: R.city(),
+          paragraph: R.cparagraph(1, 2),
+          guid: R.guid(),
+          imageUrl: R.image("200x100", "#894FC4", "#FFF", "Mock"),
+          integer: R.integer(1, 999),
+        };
+        document.getElementById("result3").textContent = JSON.stringify(
+          obj,
+          null,
+          2,
+        );
+      }
+    </script>
+
+    <h3>4. 常用占位符大全（15+）</h3>
+    <button onclick="run4()">生成</button>
+    <pre id="result4" style="background: #eee; padding: 10px"></pre>
+
+    <script>
+      function run4() {
+        const data = Mock.mock({
+          "list|3": [
+            {
+              cname: "@cname", // 中文姓名
+              ename: "@first @last", // 英文名
+              email: "@email", // 邮箱
+              url: "@url", // 网址
+              ip: "@ip", // IP
+              region: "@region", // 区域
+              province: "@province", // 省份
+              city: "@city", // 城市
+              county: "@county(true)", // 省市区
+              zip: "@zip", // 邮编
+              phone: /1[3-9]\d{9}/, // 手机号（正则）
+              ctitle: "@ctitle(5,10)", // 中文标题
+              cparagraph: "@cparagraph(1,2)", // 中文段落
+              guid: "@guid", // GUID
+              boolean: "@boolean", // 布尔
+              natural: "@natural(1,100)", // 自然数
+            },
+          ],
+        });
+        document.getElementById("result4").textContent = JSON.stringify(
+          data,
+          null,
+          2,
+        );
+      }
+    </script>
+
+    <h3>5. POST 拦截 + 请求体</h3>
+    <button onclick="login('admin', '123456')">正确登录</button>
+    <button onclick="login('admin', 'wrong')">错误密码</button>
+    <pre id="result5" style="background: #eee; padding: 10px"></pre>
+
+    <script>
+      Mock.mock("/api/login", "post", function (options) {
+        const body = JSON.parse(options.body);
+        if (body.username === "admin" && body.password === "123456") {
+          return { code: 200, message: "登录成功", token: Mock.Random.guid() };
+        } else {
+          return { code: 401, message: "用户名或密码错误" };
+        }
+      });
+
+      async function login(user, pwd) {
+        const res = await axios.post("/api/login", {
+          username: user,
+          password: pwd,
+        });
+        document.getElementById("result5").textContent = JSON.stringify(
+          res.data,
+          null,
+          2,
+        );
+      }
+    </script>
+
+    <h3>6. Mock.setup() 模拟延迟</h3>
+    <button onclick="run6()">请求（带延迟）</button>
+    <p>观察按钮按下到结果显示的时间差</p>
+    <pre id="result6" style="background: #eee; padding: 10px"></pre>
+
+    <script>
+      Mock.setup({ timeout: "500-1000" }); // 延迟 0.5~1 秒
+
+      Mock.mock("/api/delay", "get", {
+        msg: "这是延迟后的响应",
+        time: "@datetime",
+      });
+
+      async function run6() {
+        const start = Date.now();
+        const res = await axios.get("/api/delay");
+        const elapsed = Date.now() - start;
+        document.getElementById("result6").textContent =
+          `耗时：${elapsed}ms\n响应数据：${JSON.stringify(res.data, null, 2)}`;
+      }
+    </script>
+
+    <h3>7. 正则生成数据</h3>
+    <button onclick="run7()">生成</button>
+    <pre id="result7" style="background: #eee; padding: 10px"></pre>
+    <script>
+      function run7() {
+        const data = Mock.mock({
+          phone: /1[3-9]\d{9}/,
+          idCard:
+            /\d{6}(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}[\dX]/,
+          carNumber:
+            /[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤川青藏琼宁][A-Z][A-HJ-NP-Z0-9]{4}[A-HJ-NP-Z0-9挂学警港澳]/,
+          hexColor: /#[0-9a-fA-F]{6}/,
+          qq: /[1-9][0-9]{4,10}/,
+          wechatId: /[a-zA-Z][\w_-]{5,19}/,
+        });
+        document.getElementById("result7").textContent = JSON.stringify(
+          data,
+          null,
+          2,
+        );
+      }
+    </script>
+
+    <h3>8. @image 图片占位</h3>
+    <button onclick="run8()">生成图片URL</button>
+    <br /><br />
+    <img id="imgPreview" src="" alt="预览" style="border: 1px solid #ccc" />
+    <pre id="result8" style="background: #eee; padding: 10px"></pre>
+    <script>
+      function run8() {
+        const data = Mock.mock({
+          avatar: "@image('150x150', '#50B347', '#FFF', 'png', '头像')",
+          banner: "@image('800x200', '#4A90D9', '#FFF', 'jpg', '横幅')",
+          thumbnail: "@image('64x64')",
+        });
+        document.getElementById("result8").textContent = JSON.stringify(
+          data,
+          null,
+          2,
+        );
+        document.getElementById("imgPreview").src = data.avatar;
+      }
+    </script>
+
+    <h3>9. 分页数据模拟</h3>
+    <button onclick="fetchPage(1)">第1页</button>
+    <button onclick="fetchPage(2)">第2页</button>
+    <pre id="result9" style="background: #eee; padding: 10px"></pre>
+    <script>
+      Mock.mock(/\/api\/users\?page=\d+/, "get", function (options) {
+        const url = new URL(options.url, location.origin);
+        const page = parseInt(url.searchParams.get("page")) || 1;
+        const pageSize = 5;
+        const total = 23;
+        const list = [];
+        for (let i = 0; i < pageSize; i++) {
+          const id = (page - 1) * pageSize + i + 1;
+          if (id > total) break;
+          list.push(Mock.mock({ id, name: "@cname", age: "@integer(18,60)" }));
+        }
+        return { code: 200, data: { list, total, page, pageSize } };
+      });
+
+      async function fetchPage(p) {
+        const res = await axios.get(`/api/users?page=${p}`);
+        document.getElementById("result9").textContent = JSON.stringify(
+          res.data,
+          null,
+          2,
+        );
+      }
+    </script>
+
+    <h3>10. Random.extend 扩展</h3>
+    <button onclick="run10()">生成自定义数据</button>
+    <pre id="result10" style="background: #eee; padding: 10px"></pre>
+    <script>
+      Mock.Random.extend({
+        province: function () {
+          const provinces = ["广东", "江苏", "浙江", "四川", "湖北"];
+          return this.pick(provinces);
+        },
+        emoji: function () {
+          const emojis = ["😀", "😂", "🤔", "👍", "🎉"];
+          return this.pick(emojis);
+        },
+        productName: function () {
+          const prefixes = ["智能", "高端", "经典", "便携"];
+          const suffixes = ["手机", "电脑", "耳机", "手表"];
+          return this.pick(prefixes) + this.pick(suffixes);
+        },
+      });
+
+      function run10() {
+        const data = Mock.mock({
+          "items|3": [
+            {
+              province: "@province",
+              emoji: "@emoji",
+              product: "@productName",
+              score: "@integer(1,100)",
+            },
+          ],
+        });
+        document.getElementById("result10").textContent = JSON.stringify(
+          data,
+          null,
+          2,
+        );
+      }
+    </script>
+
+    <h3>11. RESTful URL 拦截</h3>
+    <button onclick="doGet()">GET /api/book/1</button>
+    <button onclick="doPut()">PUT /api/book/1</button>
+    <button onclick="doDelete()">DELETE /api/book/1</button>
+    <pre id="result11" style="background: #eee; padding: 10px"></pre>
+
+    <script>
+      Mock.mock(/\/api\/book\/\d+/, "get", {
+        code: 200,
+        book: { id: 1, title: "@ctitle", author: "@cname" },
+      });
+      Mock.mock(/\/api\/book\/\d+/, "put", function () {
+        return { code: 200, message: "更新成功" };
+      });
+      Mock.mock(/\/api\/book\/\d+/, "delete", {
+        code: 204,
+        message: "删除成功",
+      });
+
+      async function doGet() {
+        const r = await axios.get("/api/book/1");
+        document.getElementById("result11").textContent = JSON.stringify(
+          r.data,
+          null,
+          2,
+        );
+      }
+      async function doPut() {
+        const r = await axios.put("/api/book/1", { title: "新书名" });
+        document.getElementById("result11").textContent = JSON.stringify(
+          r.data,
+          null,
+          2,
+        );
+      }
+      async function doDelete() {
+        const r = await axios.delete("/api/book/1");
+        document.getElementById("result11").textContent = JSON.stringify(
+          r.data,
+          null,
+          2,
+        );
+      }
+    </script>
+
+    <h3>12. 文件上传模拟</h3>
+    <input type="file" id="fileInput" />
+    <button onclick="upload()">上传</button>
+    <pre id="result12" style="background: #eee; padding: 10px"></pre>
+    <script>
+      Mock.mock("/api/upload", "post", {
+        code: 200,
+        data: {
+          fileUrl: '@image("400x300")',
+          md5: '@string("lower", 32)',
+          size: "@integer(1024, 51200)",
+          originalName: "photo.jpg",
+          width: "@integer(800, 1920)",
+          height: "@integer(600, 1080)",
+        },
+      });
+
+      async function upload() {
+        const formData = new FormData();
+        formData.append("file", document.getElementById("fileInput").files[0]);
+        const res = await axios.post("/api/upload", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        document.getElementById("result12").textContent = JSON.stringify(
+          res.data,
+          null,
+          2,
+        );
+      }
+    </script>
+
+    <h3>13. Mock.valid & toJSONSchema</h3>
+    <button onclick="runValid()">校验数据</button>
+    <button onclick="runSchema()">转JSON Schema</button>
+    <pre id="result13" style="background: #eee; padding: 10px"></pre>
+    <script>
+      const template = {
+        name: "@cname",
+        "age|18-60": 1,
+        "gender|1": ["男", "女"],
+      };
+
+      function runValid() {
+        // 生成符合模板的数据
+        const goodData = Mock.mock(template);
+        const badData = { name: "张三", age: 70, gender: "未知" };
+        const diffGood = Mock.valid(template, goodData);
+        const diffBad = Mock.valid(template, badData);
+        document.getElementById("result13").textContent =
+          `✅ 合法数据校验结果：${diffGood.length === 0 ? "通过" : diffGood.join(", ")}\n` +
+          `❌ 非法数据校验结果：${diffBad.map((d) => d.message).join(", ")}`;
+      }
+
+      function runSchema() {
+        const schema = Mock.toJSONSchema(template);
+        document.getElementById("result13").textContent = JSON.stringify(
+          schema,
+          null,
+          2,
+        );
+      }
+    </script>
+  </body>
+</html>
